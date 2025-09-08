@@ -1,0 +1,17 @@
+# Visual Studio cache/options directory
+.vs/
+
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Sensitive settings
+appsettings.Development.json
+appsettings.Local.json
