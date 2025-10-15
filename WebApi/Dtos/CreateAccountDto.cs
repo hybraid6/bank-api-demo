@@ -1,7 +1,12 @@
 ﻿namespace WebApi.Dtos
 {
-    public class CreateAccountDto
-    {
-        public decimal InitialDeposit { get; set; }
-    }
+    public record CreateAccountDto
+    (
+     string Email,  
+     string FirstName,  
+     string LastName,  
+     string Password,
+     string Address,
+     string PhoneNumber
+    );
 }

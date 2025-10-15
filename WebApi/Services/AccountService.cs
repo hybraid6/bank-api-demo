@@ -1,57 +1,80 @@
-﻿using WebApi.Context;
+﻿using Microsoft.AspNetCore.Identity;
+using System.Net;
+using WebApi.Common;
+using WebApi.Context;
+using WebApi.Dtos;
 using WebApi.Entities;
 using WebApi.Interfaces;
 
 namespace WebApi.Services
 {
-    public class AccountService : IAccountService
+    public sealed class AccountService : IAccountService
     {
-        private readonly AppDbContext _db;
-        private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+        private readonly UserManager<User> _userManager;
 
-        public AccountService(AppDbContext db) => _db = db;
-
-        public async Task<Account> CreateAccountAsync(string userId, decimal initialDeposit)
+        public AccountService(UserManager<User> userManager)
         {
-            var account = new Account { Id = Guid.NewGuid(), UserId = userId, Balance = initialDeposit };
-            _db.Accounts.Add(account);
-            await _db.SaveChangesAsync();
-            return account;
+            _userManager = userManager;
         }
 
-        public async Task<Account> DepositAsync(Guid accountId, decimal amount)
+        public async Task<ServiceResponse<dynamic>> CreateAccountAsync(CreateAccountDto payload)
         {
-            await _lock.WaitAsync();
-            try
-            {
-                var account = await _db.Accounts.FindAsync(accountId);
-                if (account == null) throw new Exception("Account not found");
-                account.Balance += amount;
-                await _db.SaveChangesAsync();
-                return account;
-            }
-            finally
-            {
-                _lock.Release();
-            }
-        }
+            var serviceResponse = new ServiceResponse<dynamic>(); 
 
-        public async Task<Account> WithdrawAsync(Guid accountId, decimal amount)
-        {
-            await _lock.WaitAsync();
             try
             {
-                var account = await _db.Accounts.FindAsync(accountId);
-                if (account == null) throw new Exception("Account not found");
-                if (account.Balance < amount) throw new Exception("Insufficient funds");
-                account.Balance -= amount;
-                await _db.SaveChangesAsync();
-                return account;
+                var isUserExist = await _userManager.FindByEmailAsync(payload.Email);
+
+                if (isUserExist is not null)
+                {
+                    serviceResponse.Data = new { };
+                    serviceResponse.Message = "User already exists";
+                    serviceResponse.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return serviceResponse;
+                }
+
+                var newUser = new User
+                {
+                    FirstName = payload.FirstName,
+                    LastName = payload.LastName,
+                    Address = payload.Address,
+                    Email = payload.Email,
+                    PhoneNumber = payload.PhoneNumber,
+                    UserName = payload.Email,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+
+                var response = await _userManager.CreateAsync(newUser, payload.Password);
+
+                if (!response.Succeeded)
+                {
+                    var errorMsg = string.Empty;
+
+                    foreach (var error in response.Errors)
+                    {
+                        errorMsg = error.Description;
+                    }
+
+                    serviceResponse.Data = new { };
+                    serviceResponse.Message = errorMsg;
+                    serviceResponse.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return serviceResponse;
+                }
+
+                serviceResponse.Data = payload;
+                serviceResponse.StatusCode = (int)HttpStatusCode.OK;
+                serviceResponse.Message = "Registration Successful";
+                serviceResponse.Success = true;
+
+
             }
-            finally
+            catch(Exception ex)
             {
-                _lock.Release();
+                serviceResponse.Data = new { };
+                serviceResponse.StatusCode = (int)HttpStatusCode.InternalServerError;
+                serviceResponse.Message = "Internal Server Error";
             }
+            return serviceResponse;
         }
     }
 

@@ -5,18 +5,15 @@ using WebApi.Entities;
 
 namespace WebApi.Context
 {
-    public class AppDbContext : IdentityDbContext<ApplicationUser>
+    public class AppDbContext : IdentityDbContext<User> 
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<Account> Accounts { get; set; }
+        public DbSet<User> Users { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder builder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(builder);
-            builder.Entity<Account>()
-                .Property(a => a.RowVersion)
-                .IsRowVersion();
+            base.OnModelCreating(modelBuilder);
         }
     }
 }

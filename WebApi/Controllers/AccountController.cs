@@ -1,46 +1,31 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Dtos;
-using WebApi.Entities;
 using WebApi.Interfaces;
+using WebApi.Common;
 
 namespace WebApi.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [ApiController]
     public class AccountController : ControllerBase
     {
-        private readonly IAccountService _service;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IAccountService _accountService;
 
-        public AccountController(IAccountService service, UserManager<ApplicationUser> userManager)
+        public AccountController(IAccountService accountService)
         {
-            _service = service;
-            _userManager = userManager;
+            _accountService = accountService;
         }
 
-        [HttpPost("create")]
-        public async Task<IActionResult> CreateAccount(CreateAccountDto dto)
+        [HttpPost("CreateAccount")]
+        public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto payload)
         {
-            var user = await _userManager.GetUserAsync(User);
-            var account = await _service.CreateAccountAsync(user.Id, dto.InitialDeposit);
-            return Ok(account);
+            var serviceResponse = new ServiceResponse<dynamic>();
+
+            serviceResponse = await _accountService.CreateAccountAsync(payload);
+
+            return StatusCode(serviceResponse.StatusCode, serviceResponse);
         }
 
-        [HttpPost("{id}/deposit")]
-        public async Task<IActionResult> Deposit(Guid id, decimal amount)
-        {
-            var account = await _service.DepositAsync(id, amount);
-            return Ok(account);
-        }
-
-        [HttpPost("{id}/withdraw")]
-        public async Task<IActionResult> Withdraw(Guid id, decimal amount)
-        {
-            var account = await _service.WithdrawAsync(id, amount);
-            return Ok(account);
-        }
     }
 }
